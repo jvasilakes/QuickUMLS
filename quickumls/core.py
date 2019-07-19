@@ -78,6 +78,7 @@ class QuickUMLS(object):
 
         simstring_fp = os.path.join(quickumls_fp, 'umls-simstring.db')
         cuisem_fp = os.path.join(quickumls_fp, 'cui-semtypes.db')
+        cuipt_fp = os.path.join(quickumls_fp, 'cui-preferred-terms.db')
 
         self.valid_punct = constants.UNICODE_DASHES
         self.negations = constants.NEGATIONS
@@ -150,6 +151,9 @@ class QuickUMLS(object):
             simstring_fp, similarity_name, threshold
         )
         self.cuisem_db = toolbox.CuiSemTypesDB(cuisem_fp)
+        self.cuipt_db = None
+        if os.path.exists(cuipt_fp):
+            self.cuipt_db = toolbox.CuiPreferredTermDB(cuipt_fp)
 
     def get_info(self):
         """Computes a summary of the matcher options.
@@ -328,8 +332,7 @@ class QuickUMLS(object):
 
                     prev_cui = cui
 
-                    ngram_matches.append(
-                        {
+                    output = {
                             'start': start,
                             'end': end,
                             'ngram': ngram,
@@ -339,7 +342,11 @@ class QuickUMLS(object):
                             'semtypes': semtypes,
                             'preferred': preferred
                         }
-                    )
+                    if self.cuipt_db is not None:
+                        preferred_term = self.cuipt_db.get(cui)
+                        output.update({'preferred_term': preferred_term})
+
+                    ngram_matches.append(output)
 
             if len(ngram_matches) > 0:
                 matches.append(

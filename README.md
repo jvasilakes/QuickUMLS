@@ -17,6 +17,7 @@ This project should be compatible with Python 3 (Python 2 is [no longer supporte
     - `-L` / `--lowercase`: if used, all concept terms are folded to lowercase before being processed. This option typically increases recall, but it might reduce precision;
     - `-U` / `--normalize-unicode`: if used, expressions with non-ASCII characters are converted to the closest combination of ASCII characters.
     - `-E` / `--language`: Specify the language to consider for UMLS concepts; by default, English is used. For a complete list of languages, please see [this table provided by NLM](https://www.nlm.nih.gov/research/umls/knowledge_sources/metathesaurus/release/abbreviations.html#LAT).
+    - `-P` / `--save_preferred_terms`: if used, the preferred terms of each CUI will be saved to a database and the output of `QuickUMLS().match()` will contain an additional `preferred_term` field.
 
 
 **†**: If the installation fails on macOS when using Anaconda, install `leveldb` first by running `conda install -c conda-forge python-leveldb`.

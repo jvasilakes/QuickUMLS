@@ -10,7 +10,8 @@ import argparse
 from six.moves import input
 
 # project modules
-from .toolbox import countlines, CuiSemTypesDB, SimstringDBWriter, mkdir
+from .toolbox import countlines, mkdir, CuiSemTypesDB, SimstringDBWriter, \
+                     CuiPreferredTermDB
 from .constants import HEADERS_MRCONSO, HEADERS_MRSTY, LANGUAGES
 
 try:
@@ -98,13 +99,18 @@ def extract_from_mrconso(
     print(status)
 
 
-def parse_and_encode_ngrams(extracted_it, simstring_dir, cuisty_dir):
-    # Create destination directories for the two databases
+def parse_and_encode_ngrams(extracted_it, simstring_dir, cuisty_dir,
+                            cuipt_dir=None):
+    # Create destination directories for the databases
     mkdir(simstring_dir)
     mkdir(cuisty_dir)
+    if cuipt_dir is not None:
+        mkdir(cuipt_dir)
 
     ss_db = SimstringDBWriter(simstring_dir)
     cuisty_db = CuiSemTypesDB(cuisty_dir)
+    if cuipt_dir is not None:
+        cuipt_db = CuiPreferredTermDB(cuipt_dir)
 
     simstring_terms = set()
 
@@ -114,6 +120,9 @@ def parse_and_encode_ngrams(extracted_it, simstring_dir, cuisty_dir):
             simstring_terms.add(term)
 
         cuisty_db.insert(term, cui, stys, preferred)
+        if cuipt_dir is not None:
+            if preferred == 1:
+                cuipt_db.insert(cui, term)
 
 
 def parse_args():
@@ -138,6 +147,10 @@ def parse_args():
     ap.add_argument(
         '-E', '--language', default='ENG', choices=LANGUAGES,
         help='Extract concepts of the specified language'
+    )
+    ap.add_argument(
+        '-P', '--save_preferred_terms', action='store_true',
+        help='Create a database of preferred terms for each CUI'
     )
     opts = ap.parse_args()
     return opts
@@ -196,8 +209,13 @@ def main():
 
     simstring_dir = os.path.join(opts.destination_path, 'umls-simstring.db')
     cuisty_dir = os.path.join(opts.destination_path, 'cui-semtypes.db')
+    cuipt_dir = None
+    if opts.save_preferred_terms is True:
+        cuipt_dir = os.path.join(opts.destination_path,
+                                 'cui-preferred-terms.db')
 
-    parse_and_encode_ngrams(mrconso_iterator, simstring_dir, cuisty_dir)
+    parse_and_encode_ngrams(mrconso_iterator, simstring_dir, cuisty_dir,
+                            cuipt_dir=cuipt_dir)
 
 
 if __name__ == '__main__':

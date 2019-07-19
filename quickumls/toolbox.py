@@ -233,7 +233,7 @@ class CuiSemTypesDB(object):
             self.cui_db.Get(db_key_encode(term))
             return True
         except KeyError:
-            return
+            return False
 
     def insert(self, term, cui, semtypes, is_preferred):
         term = prepare_string_for_db_input(safe_unicode(term))
@@ -269,3 +269,39 @@ class CuiSemTypesDB(object):
             for cui, is_preferred in cuis
         )
         return matches
+
+
+class CuiPreferredTermDB(object):
+    def __init__(self, path):
+        if not (os.path.exists(path) or os.path.isdir(path)):
+            err_msg = (
+                '"{}" is not a valid directory').format(path)
+            raise IOError(err_msg)
+
+        self.cui_pt_db = leveldb.LevelDB(
+            os.path.join(path, 'cui_pt.leveldb'))
+
+    def has_cui(self, cui):
+        cui = prepare_string_for_db_input(safe_unicode(cui))
+        try:
+            self.cui_pt_db.Get(db_key_encode(cui))
+            return True
+        except KeyError:
+            return False
+
+    def insert(self, cui, preferred_term):
+        cui = prepare_string_for_db_input(safe_unicode(cui))
+        pt = prepare_string_for_db_input(safe_unicode(preferred_term))
+
+        try:
+            self.cui_pt_db.Get(db_key_encode(cui))
+        except KeyError:
+            self.cui_pt_db.Put(db_key_encode(cui), pickle.dumps(pt))
+
+    def get(self, cui):
+        cui = prepare_string_for_db_input(safe_unicode(cui))
+        try:
+            pt = pickle.loads(self.cui_pt_db.Get(db_key_encode(cui)))
+            return pt
+        except KeyError:
+            return ""
