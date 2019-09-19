@@ -7,7 +7,7 @@ import time
 import codecs
 import shutil
 import argparse
-from six.moves import input
+from six.moves import input as six_input
 
 # project modules
 from .toolbox import countlines, mkdir, CuiSemTypesDB, SimstringDBWriter, \
@@ -60,7 +60,6 @@ def extract_from_mrconso(
 
     total = countlines(mrconso_path)
 
-    processed = set()
     i = 0
 
     for content in mrconso_iterator:
@@ -76,6 +75,8 @@ def extract_from_mrconso(
 
         concept_text = content['str'].strip()
         cui = content['cui']
+        sab = content['sab']
+        tty = content['tty']
         preferred = 1 if content['ispref'] == 'Y' else 0
 
         if opts.lowercase:
@@ -84,12 +85,7 @@ def extract_from_mrconso(
         if opts.normalize_unicode:
             concept_text = unidecode(concept_text)
 
-        if (cui, concept_text) in processed:
-            continue
-        else:
-            processed.add((cui, concept_text))
-
-        yield (concept_text, cui, sem_types[cui], preferred)
+        yield (concept_text, cui, sem_types[cui], sab, tty, preferred)
 
     delta = time.time() - start
     status = (
@@ -114,14 +110,14 @@ def parse_and_encode_ngrams(extracted_it, simstring_dir, cuisty_dir,
 
     simstring_terms = set()
 
-    for i, (term, cui, stys, preferred) in enumerate(extracted_it, start=1):
+    for i, (term, cui, stys, sab, tty, preferred) in enumerate(extracted_it, start=1):  # noqa
         if term not in simstring_terms:
             ss_db.insert(term)
             simstring_terms.add(term)
 
         cuisty_db.insert(term, cui, stys, preferred)
         if cuipt_dir is not None:
-            if preferred == 1:
+            if preferred == 1 and sab == "MTH" and tty == "PN":
                 cuipt_db.insert(cui, term)
 
 
@@ -160,9 +156,9 @@ def main():
     opts = parse_args()
 
     if not os.path.exists(opts.destination_path):
-        msg = ('Directory "{}" does not exists; should I create it? [y/N] '
+        msg = ('Directory "{}" does not exist; should I create it? [y/N] '
                ''.format(opts.destination_path))
-        create = input(msg).lower().strip() == 'y'
+        create = six_input(msg).lower().strip() == 'y'
 
         if create:
             os.makedirs(opts.destination_path)
@@ -173,7 +169,7 @@ def main():
     if len(os.listdir(opts.destination_path)) > 0:
         msg = ('Directory "{}" is not empty; should I empty it? [y/N] '
                ''.format(opts.destination_path))
-        empty = input(msg).lower().strip() == 'y'
+        empty = six_input(msg).lower().strip() == 'y'
         if empty:
             shutil.rmtree(opts.destination_path)
             os.mkdir(opts.destination_path)
@@ -209,6 +205,7 @@ def main():
 
     simstring_dir = os.path.join(opts.destination_path, 'umls-simstring.db')
     cuisty_dir = os.path.join(opts.destination_path, 'cui-semtypes.db')
+
     cuipt_dir = None
     if opts.save_preferred_terms is True:
         cuipt_dir = os.path.join(opts.destination_path,
